@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daily Deck — every daily puzzle game in one place</title>
+<meta name="description" content="Wordle, Connections, LoLdle, 82-0, Footy Tic Tac Toe and 70+ more daily games. Track what you've cleared today, keep a streak, reset at midnight.">
+<meta name="theme-color" content="#13161B">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2313161B'/%3E%3Crect x='6' y='6' width='8' height='8' rx='2' fill='%23F0C04A'/%3E%3Crect x='18' y='6' width='8' height='8' rx='2' fill='%2354AEE8'/%3E%3Crect x='6' y='18' width='8' height='8' rx='2' fill='%235BC98D'/%3E%3Crect x='18' y='18' width='8' height='8' rx='2' fill='%23A184EA'/%3E%3C/svg%3E">
+<meta property="og:title" content="Daily Deck">
+<meta property="og:description" content="Every daily puzzle game in one place. Track today's run, keep your streak.">
+<meta property="og:type" content="website">
+<style>
+  html{background:#13161B}
+  body{max-width:1200px;margin:0 auto}
+  :root{
+    --bg:#13161B;
+    --card:#1C2129;
+    --card-hi:#232932;
+    --well:#0D1014;
+    --line:#2A313B;
+    --text:#E8ECF1;
+    --dim:#939DAB;
+    --dimmer:#616B79;
+  }
+  *{box-sizing:border-box}
+  body{margin:0}
+  .deck{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);color:var(--text);padding:18px;border-radius:5px;
+    font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-variant-numeric:tabular-nums}
+
+  /* ---------- status strip ---------- */
+  .status{
+    background:var(--well);border:1px solid var(--line);border-radius:4px;
+    padding:12px 16px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;
+  }
+  .stat{display:flex;flex-direction:column;gap:2px}
+  .stat .v{font-size:26px;line-height:1.1}
+  .stat .l{font-size:11px;color:var(--dimmer)}
+  .clock .v{color:#F0B840}
+  .clock .v .s{color:#8A6A24}
+  .cleared .v b{font-weight:400}
+  .cleared .v i{font-style:normal;color:var(--dimmer);font-size:16px}
+  .streak .v{color:#5BC98D}
+  .status .bar{flex:1 1 140px;min-width:120px;height:6px;background:#05070A;border-radius:3px;overflow:hidden}
+  .status .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#B78A2A,#F0B840);transition:width .3s}
+
+  /* ---------- tabs ---------- */
+  .tabs{display:flex;gap:7px;flex-wrap:wrap;margin:16px 0 0}
+  .tab{
+    border:1px solid var(--line);background:var(--card);color:var(--dim);
+    padding:8px 13px;border-radius:999px;font:inherit;font-size:13px;cursor:pointer;
+    display:flex;align-items:center;gap:7px;
+  }
+  .tab:hover{background:var(--card-hi);color:var(--text)}
+  .tab .dot{width:9px;height:9px;border-radius:50%;background:var(--c,#666);flex:none}
+  .tab .n{font-size:11px;color:var(--dimmer)}
+  .tab[aria-pressed="true"]{color:#12151A;font-weight:600;border-color:transparent}
+  .tab[aria-pressed="true"] .n{color:rgba(18,21,26,.55)}
+  .tab[aria-pressed="true"] .dot{background:rgba(18,21,26,.5)}
+  .tab:focus-visible{outline:2px solid #F0B840;outline-offset:2px}
+
+  .tools{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 6px}
+  .search{
+    flex:1 1 220px;min-width:150px;background:var(--well);border:1px solid var(--line);
+    color:var(--text);padding:9px 12px;border-radius:4px;font:inherit;
+  }
+  .search::placeholder{color:var(--dimmer)}
+  .search:focus{outline:none;border-color:#F0B840}
+  .btn{background:var(--card);border:1px solid var(--line);color:var(--dim);padding:9px 13px;border-radius:4px;font:inherit;cursor:pointer}
+  .btn:hover{background:var(--card-hi);color:var(--text)}
+  .btn.on{background:#F0B840;border-color:#F0B840;color:#12151A;font-weight:600}
+  .btn:focus-visible{outline:2px solid #F0B840;outline-offset:2px}
+
+  /* ---------- sections ---------- */
+  .group{margin-top:24px}
+  .ghead{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .ghead .swatch{width:4px;height:19px;border-radius:2px;background:var(--c)}
+  .ghead h3{margin:0;font-size:15px;font-weight:600;color:var(--c)}
+  .ghead .count{font-size:11.5px;color:var(--dimmer)}
+  .ghead .rule{flex:1;height:1px;background:var(--line)}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(224px,1fr));gap:9px}
+  .tile{
+    position:relative;background:var(--card);border:1px solid var(--line);
+    border-left:4px solid var(--c);border-radius:4px;
+    padding:11px 40px 11px 12px;cursor:pointer;min-height:76px;
+    display:flex;flex-direction:column;gap:3px;
+  }
+  .tile:hover{background:var(--card-hi);border-color:var(--c)}
+  .tile.done{opacity:.45}
+  .tile.done .name{text-decoration:line-through;text-decoration-color:var(--dimmer)}
+  .tile.pinned{box-shadow:inset 0 0 0 1px rgba(240,184,64,.35)}
+  .name{color:var(--text);text-decoration:none;font-size:14.5px;font-weight:500}
+  .name:hover{color:var(--c)}
+  .name:focus-visible{outline:2px solid #F0B840;outline-offset:2px;border-radius:2px}
+  .blurb{margin:0;color:var(--dim);font-size:12px;line-height:1.35}
+  .ctrl{position:absolute;top:7px;right:7px;display:flex;flex-direction:column;gap:3px}
+  .ico{background:none;border:none;padding:4px;cursor:pointer;color:#48515D;line-height:0;border-radius:3px}
+  .ico:hover{background:#0D1014;color:var(--text)}
+  .ico.fav-on{color:#F0B840}
+  .ico.done-on{color:#5BC98D}
+  .ico:focus-visible{outline:2px solid #F0B840}
+
+  .empty{padding:30px;text-align:center;color:var(--dim);background:var(--card);border:1px solid var(--line);border-radius:4px;margin-top:20px}
+  .foot{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;margin-top:22px;padding-top:12px;border-top:1px solid var(--line);color:var(--dimmer);font-size:11.5px}
+  kbd{background:var(--card);border:1px solid var(--line);border-bottom-width:2px;border-radius:3px;padding:1px 5px;font-size:11px;color:var(--dim)}
+  @media (max-width:520px){
+    .deck{padding:12px}.stat .v{font-size:21px}.status{gap:14px;padding:11px 12px}
+    .foot .keys{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="deck">
+  <div class="status">
+    <div class="stat clock"><span class="v mono" id="clock">--:--<span class="s">:--</span></span><span class="l" id="dateline">until everything resets</span></div>
+    <div class="stat cleared"><span class="v mono"><b id="doneCount">0</b><i id="totalCount">/0</i></span><span class="l">cleared today</span></div>
+    <div class="stat streak"><span class="v mono" id="streak">0</span><span class="l">day streak</span></div>
+    <div class="bar"><i id="fill"></i></div>
+  </div>
+
+  <div class="tabs" id="tabs"></div>
+
+  <div class="tools">
+    <input class="search" id="q" placeholder="Search by name  ( / )" autocomplete="off" spellcheck="false">
+    <button class="btn" id="hideDone">Hide cleared</button>
+    <button class="btn" id="pick">Surprise me</button>
+  </div>
+
+  <div id="board"></div>
+
+  <div class="foot">
+    <div class="keys"><kbd>/</kbd> search · <kbd>↑↓←→</kbd> move · <kbd>enter</kbd> open · <kbd>x</kbd> clear · <kbd>f</kbd> pin · <kbd>r</kbd> random</div>
+    <button class="btn" id="reset" style="padding:4px 9px;font-size:11.5px">Reset today</button>
+  </div>
+</div>
+
+<script>
+const CATS = [
+  {k:"word",   label:"Words",          c:"#F0C04A"},
+  {k:"geo",    label:"Places",         c:"#54AEE8"},
+  {k:"games",  label:"Video games",    c:"#A184EA"},
+  {k:"screen", label:"Film, TV, music",c:"#EE7B63"},
+  {k:"sport",  label:"Sport",          c:"#5BC98D"},
+  {k:"logic",  label:"Numbers & logic",c:"#4FC7C2"},
+  {k:"trivia", label:"Trivia",         c:"#EE9A4D"},
+  {k:"fun",    label:"Just for fun",   c:"#A9D356"},
+  {k:"friends",label:"With friends",   c:"#7E8FEF"},
+];
+const CAT = Object.fromEntries(CATS.map(c=>[c.k,c]));
+
+const GAMES = [
+  // ---- Words ----
+  {n:"Wordle", u:"https://www.nytimes.com/games/wordle/index.html", c:"word", b:"Five letters, six guesses."},
+  {n:"Connections", u:"https://www.nytimes.com/games/connections", c:"word", b:"Sort sixteen words into four hidden groups."},
+  {n:"Strands", u:"https://www.nytimes.com/games/strands", c:"word", b:"Word search with a theme you have to work out."},
+  {n:"Spelling Bee", u:"https://www.nytimes.com/puzzles/spelling-bee", c:"word", b:"Seven letters, one mandatory. Chase genius."},
+  {n:"The Mini", u:"https://www.nytimes.com/crosswords/game/mini", c:"word", b:"A crossword you finish before the kettle boils."},
+  {n:"NYT Crossword", u:"https://www.nytimes.com/crosswords", c:"word", b:"The full grid. Monday easy, Saturday brutal."},
+  {n:"Quordle", u:"https://www.merriam-webster.com/games/quordle", c:"word", b:"Four Wordles at once, nine guesses total."},
+  {n:"Octordle", u:"https://www.britannica.com/games/octordle", c:"word", b:"Eight grids, for people who found Quordle relaxing."},
+  {n:"Waffle", u:"https://wafflegame.net", c:"word", b:"Swap letters around a grid to fix six words."},
+  {n:"Squaredle", u:"https://squaredle.app", c:"word", b:"Hunt every word hiding in a small grid."},
+  {n:"Semantle", u:"https://semantle.com", c:"word", b:"Guess by meaning, not spelling. Can take hours."},
+  {n:"Contexto", u:"https://contexto.me", c:"word", b:"Same idea as Semantle, gentler ranking."},
+  {n:"Polygonle", u:"https://www.polygonle.com", c:"word", b:"You get the word's shape, not its letters."},
+  {n:"Blossom", u:"https://www.merriam-webster.com/games/blossom-word-game", c:"word", b:"Petal letters, one centre. Score by length."},
+  {n:"Knotwords", u:"https://knotwords.com", c:"word", b:"Crossword meets sudoku. No clues, just letter sets."},
+
+  // ---- Places ----
+  {n:"GeoGuessr Daily", u:"https://www.geoguessr.com/daily-challenges", c:"geo", b:"Dropped on a street somewhere. Where are you?"},
+  {n:"Worldle", u:"https://worldle.teuteuf.fr", c:"geo", b:"Name the country from its silhouette."},
+  {n:"Globle", u:"https://globle-game.com", c:"geo", b:"Guess countries, the globe warms as you close in."},
+  {n:"Travle", u:"https://travle.earth", c:"geo", b:"Get from A to B naming every country between."},
+  {n:"Tradle", u:"https://games.oec.world/en/tradle", c:"geo", b:"Identify a country from its export breakdown."},
+  {n:"Flagle", u:"https://www.flagle.io", c:"geo", b:"A flag revealed one tile at a time."},
+  {n:"Metro Memory", u:"https://metro-memory.com", c:"geo", b:"Name every station on a city's transit map."},
+  {n:"TimeGuessr", u:"https://timeguessr.com", c:"geo", b:"Place a photo in space and in the right year."},
+  {n:"Chronophoto", u:"https://www.chronophoto.app", c:"geo", b:"Date five photographs. Harder than it sounds."},
+
+  // ---- Video games ----
+  {n:"LoLdle", u:"https://loldle.net", c:"games", b:"League champion from clues, quote, splash and ability."},
+  {n:"Pokédle", u:"https://pokedle.net", c:"games", b:"Narrow it down by type, stats and generation."},
+  {n:"Squirdle", u:"https://squirdle.fireblend.com", c:"games", b:"The older, meaner Pokémon guesser."},
+  {n:"Gamedle", u:"https://www.gamedle.wtf", c:"games", b:"A game from a blurred cover or keywords."},
+  {n:"Guess The Game", u:"https://guessthe.game", c:"games", b:"Six screenshots, six chances, one title."},
+
+  // ---- Screen & sound ----
+  {n:"Framed", u:"https://framed.wtf", c:"screen", b:"Six stills from one film, revealed one by one."},
+  {n:"Moviedle", u:"https://moviedle.app", c:"screen", b:"An entire film compressed into one second."},
+  {n:"Actorle", u:"https://actorle.com", c:"screen", b:"An actor's filmography with the titles blanked out."},
+  {n:"Cine2Nerdle", u:"https://www.cine2nerdle.app", c:"screen", b:"Connect films through cast, crew and keywords."},
+  {n:"Binge", u:"https://www.cine2nerdle.app/binge", c:"screen", b:"Build a chain of films sharing a link each time."},
+  {n:"Emovi", u:"https://emovi.teuteuf.fr", c:"screen", b:"A film plot told entirely in emoji."},
+  {n:"Bandle", u:"https://bandle.app", c:"screen", b:"A song rebuilt instrument by instrument."},
+
+  // ---- Sport ----
+  {n:"82-0", u:"https://www.82-0.com/", c:"sport", b:"Spin a team and era, draft five legends, simulate a perfect season."},
+  {n:"Footy Tic Tac Toe", u:"https://playfootball.games/footy-tic-tac-toe/", c:"sport", b:"Noughts and crosses where every square needs a footballer."},
+  {n:"Box2Box", u:"https://playfootball.games/box2box/", c:"sport", b:"Fill a football grid against a three-minute clock."},
+  {n:"Play Football Games", u:"https://playfootball.games", c:"sport", b:"The whole hub — Who Are Ya, transfer chains, career paths."},
+  {n:"Tiki Taka Toe", u:"https://www.tikitakatoe.org/", c:"sport", b:"Unlimited football grids by league, no daily wait."},
+  {n:"Immaculate Grid", u:"https://www.immaculategrid.com", c:"sport", b:"Name players who fit each row and column pairing."},
+  {n:"Poeltl", u:"https://poeltl.dunk.town", c:"sport", b:"The NBA player from team, position and stats."},
+  {n:"Weddle", u:"https://weddlegame.com", c:"sport", b:"The NFL version. Same idea, different sport."},
+  {n:"First Down Studio", u:"https://www.firstdown.studio/build-a-82-0-team", c:"sport", b:"Roster builders for basketball, football and baseball."},
+
+  // ---- Numbers & logic ----
+  {n:"LinkedIn Games", u:"https://www.linkedin.com/games", c:"logic", b:"Queens, Tango and Zip. Better than they have any right to be."},
+  {n:"Nerdle", u:"https://nerdlegame.com", c:"logic", b:"Wordle where the answer is an equation."},
+  {n:"Mathler", u:"https://www.mathler.com", c:"logic", b:"Find the calculation that hits today's number."},
+  {n:"Puzzmo", u:"https://www.puzzmo.com", c:"logic", b:"A full daily set: Cross Cells, Flipart, Really Bad Chess."},
+  {n:"Sudoku", u:"https://sudoku.com", c:"logic", b:"Four difficulties, fresh grid every day."},
+  {n:"Nonograms", u:"https://www.puzzle-nonograms.com", c:"logic", b:"Numbers on the edges, a picture hiding in the grid."},
+  {n:"Kakuro", u:"https://www.puzzle-kakuro.com", c:"logic", b:"Crossword rules, arithmetic answers."},
+  {n:"Minesweeper", u:"https://minesweeper.online", c:"logic", b:"Daily boards with proper leaderboards."},
+  {n:"Lichess Daily Puzzle", u:"https://lichess.org/training/daily", c:"logic", b:"One chess position, one winning idea."},
+  {n:"Puzzle Storm", u:"https://lichess.org/storm", c:"logic", b:"Three minutes of chess puzzles, as many as you can."},
+
+  // ---- Trivia ----
+  {n:"Wikitrivia", u:"https://wikitrivia.tomjwatson.com", c:"trivia", b:"Drop events onto a timeline. One wrong slot ends it."},
+  {n:"Redactle", u:"https://www.redactle.net", c:"trivia", b:"A Wikipedia article with every noun blacked out."},
+  {n:"Sporcle", u:"https://www.sporcle.com", c:"trivia", b:"An endless well of name-all-the-things quizzes."},
+  {n:"JetPunk", u:"https://www.jetpunk.com", c:"trivia", b:"Cleaner, faster quizzes. New ones daily."},
+
+  // ---- Just for fun ----
+  {n:"Infinite Craft", u:"https://neal.fun/infinite-craft/", c:"fun", b:"Combine two things into a third. It never runs out."},
+  {n:"The Password Game", u:"https://neal.fun/password-game/", c:"fun", b:"Make a password. The rules get steadily unhinged."},
+  {n:"Spend Bill Gates' Money", u:"https://neal.fun/spend/", c:"fun", b:"You have a fortune and a shopping cart. Go."},
+  {n:"2048", u:"https://play2048.co", c:"fun", b:"Slide tiles, double numbers, reach 2048."},
+  {n:"Cookie Clicker", u:"https://orteil.dashnet.org/cookieclicker/", c:"fun", b:"Click cookie. Buy grandma. Lose several weeks."},
+  {n:"Little Alchemy 2", u:"https://littlealchemy2.com", c:"fun", b:"Four elements in, seven hundred things out."},
+  {n:"Universal Paperclips", u:"https://www.decisionproblem.com/paperclips/", c:"fun", b:"A clicker that quietly becomes something else."},
+  {n:"A Dark Room", u:"https://adarkroom.doublespeakgames.com", c:"fun", b:"Starts as one button in the dark. Trust it."},
+  {n:"Monkeytype", u:"https://monkeytype.com", c:"fun", b:"A typing test that's genuinely nice to look at."},
+  {n:"Human Benchmark", u:"https://humanbenchmark.com", c:"fun", b:"Reaction time, memory, aim. Find out you're average."},
+  {n:"The Wiki Game", u:"https://www.thewikigame.com", c:"fun", b:"Race between two Wikipedia pages using links only."},
+  {n:"Line Rider", u:"https://www.linerider.com", c:"fun", b:"Draw a track, watch a man on a sled ruin it."},
+
+  // ---- With friends ----
+  {n:"skribbl.io", u:"https://skribbl.io", c:"friends", b:"Draw badly, guess loudly. Free rooms, no signup."},
+  {n:"Gartic Phone", u:"https://garticphone.com", c:"friends", b:"Telephone with drawings. Best with six or more."},
+  {n:"Codenames", u:"https://codenames.game", c:"friends", b:"One-word clues, two teams, constant betrayal."},
+  {n:"Lichess", u:"https://lichess.org", c:"friends", b:"Send a challenge link, play chess in ten seconds."},
+];
+GAMES.forEach(g => g.id = g.n.toLowerCase().replace(/[^a-z0-9]/g,""));
+
+/* ---------------- state ---------------- */
+const KEY = "dailydeck:v2";
+let S = {day:"", done:[], favs:[], hist:{}};
+let ui = {q:"", cat:"all", hideDone:false, cursor:-1};
+const today = () => new Date().toLocaleDateString("en-CA");
+const $ = s => document.querySelector(s);
+
+/* Saves to this browser only. Nothing is sent anywhere — there is no server.
+   Private windows and "clear site data" will wipe it. */
+const store = {
+  get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } },
+  set(k,v){ try{ localStorage.setItem(k,v); }catch(e){ console.warn("Progress is not being saved:", e); } }
+};
+
+function load(){
+  const raw = store.get(KEY);
+  if(raw){ try{ Object.assign(S, JSON.parse(raw)); }catch(e){} }
+  rollover();
+}
+let t_save;
+function save(){
+  clearTimeout(t_save);
+  t_save = setTimeout(()=> store.set(KEY, JSON.stringify(S)), 150);
+}
+function rollover(){
+  const t = today();
+  if(S.day !== t){ if(S.day) S.hist[S.day] = S.done.length; S.day = t; S.done = []; save(); }
+}
+function streak(){
+  const h = Object.assign({}, S.hist); h[S.day] = S.done.length;
+  let n = 0; const d = new Date();
+  if(!h[today()]) d.setDate(d.getDate()-1);
+  for(let i=0;i<400;i++){
+    const k = d.toLocaleDateString("en-CA");
+    if(h[k] > 0){ n++; d.setDate(d.getDate()-1); } else break;
+  }
+  return n;
+}
+
+/* ---------------- render ---------------- */
+function tick(){
+  const now = new Date(), mid = new Date(now); mid.setHours(24,0,0,0);
+  const s = Math.floor((mid-now)/1000);
+  $("#clock").innerHTML = `${String(Math.floor(s/3600)).padStart(2,"0")}:${String(Math.floor(s%3600/60)).padStart(2,"0")}<span class="s">:${String(s%60).padStart(2,"0")}</span>`;
+  if(today() !== S.day){ rollover(); renderAll(); }
+}
+function renderStatus(){
+  $("#doneCount").textContent = S.done.length;
+  $("#totalCount").textContent = "/" + GAMES.length;
+  $("#fill").style.width = (S.done.length/GAMES.length*100) + "%";
+  $("#streak").textContent = streak();
+  $("#dateline").textContent = new Date().toLocaleDateString(undefined,{weekday:"long", day:"numeric", month:"short"}) + " · until reset";
+}
+function renderTabs(){
+  const allOn = ui.cat === "all";
+  let html = `<button class="tab" data-cat="all" aria-pressed="${allOn}" style="${allOn?"background:#E8ECF1":""}">Everything<span class="n">${GAMES.length}</span></button>`;
+  html += CATS.map(c=>{
+    const n = GAMES.filter(g=>g.c===c.k).length, on = ui.cat===c.k;
+    return `<button class="tab" data-cat="${c.k}" aria-pressed="${on}" style="--c:${c.c};${on?`background:${c.c}`:""}">
+      <span class="dot"></span>${c.label}<span class="n">${n}</span></button>`;
+  }).join("");
+  $("#tabs").innerHTML = html;
+}
+const STAR  = `<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.6L12 17.6 6.1 20.7l1.2-6.6L2.5 9.5l6.6-.9z"/></svg>`;
+const CHECK = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5.5 5.5L20 6"/></svg>`;
+
+function tileHTML(g){
+  const done = S.done.includes(g.id), fav = S.favs.includes(g.id);
+  return `<div class="tile ${done?"done":""} ${fav?"pinned":""}" data-id="${g.id}" style="--c:${CAT[g.c].c}">
+    <div class="ctrl">
+      <button class="ico ${done?"done-on":""}" data-act="done" data-id="${g.id}" title="${done?"Mark as not done":"Mark as cleared"}" aria-label="${done?"Mark not done":"Mark cleared"}: ${g.n}">${CHECK}</button>
+      <button class="ico ${fav?"fav-on":""}" data-act="fav" data-id="${g.id}" title="${fav?"Unpin":"Pin to the top"}" aria-label="${fav?"Unpin":"Pin"} ${g.n}">${STAR}</button>
+    </div>
+    <a class="name" href="${g.u}" target="_blank" rel="noopener noreferrer">${g.n}</a>
+    <p class="blurb">${g.b}</p>
+  </div>`;
+}
+function visible(){
+  const q = ui.q.trim().toLowerCase();
+  return GAMES.filter(g=>{
+    if(ui.cat!=="all" && g.c!==ui.cat) return false;
+    if(ui.hideDone && S.done.includes(g.id)) return false;
+    if(q && !(g.n+" "+g.b+" "+CAT[g.c].label).toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+function section(title, colour, list){
+  return `<div class="group"><div class="ghead" style="--c:${colour}">
+    <span class="swatch"></span><h3>${title}</h3><span class="count">${list.length}</span><span class="rule"></span>
+  </div><div class="grid">${list.map(tileHTML).join("")}</div></div>`;
+}
+function renderBoard(){
+  const list = visible(), board = $("#board");
+  if(!list.length){
+    board.innerHTML = `<div class="empty">Nothing matches that.<br><br><button class="btn" id="clearFilters">Show everything</button></div>`;
+    $("#clearFilters").onclick = ()=>{ ui={q:"",cat:"all",hideDone:false,cursor:-1}; $("#q").value=""; $("#hideDone").classList.remove("on"); renderAll(); };
+    return;
+  }
+  let html = "";
+  const pinned = list.filter(g=>S.favs.includes(g.id));
+  const showPinned = pinned.length && !ui.q;
+  if(showPinned) html += section("Your routine", "#F0B840", pinned);
+  const rest = showPinned ? list.filter(g=>!S.favs.includes(g.id)) : list;
+
+  if(ui.cat === "all" && !ui.q){
+    CATS.forEach(c=>{ const sub = rest.filter(g=>g.c===c.k); if(sub.length) html += section(c.label, c.c, sub); });
+  } else if(rest.length){
+    html += section(ui.q ? `Matching “${ui.q}”` : CAT[ui.cat].label, ui.q ? "#939DAB" : CAT[ui.cat].c, rest);
+  }
+  board.innerHTML = html;
+}
+function renderAll(){ renderStatus(); renderTabs(); renderBoard(); }
+
+/* ---------------- actions ---------------- */
+const byId = id => GAMES.find(g=>g.id===id);
+function toggle(list, id){ const i = S[list].indexOf(id); i<0 ? S[list].push(id) : S[list].splice(i,1); save(); }
+function markDone(g){ if(!S.done.includes(g.id)){ S.done.push(g.id); save(); } }
+
+document.addEventListener("click", e=>{
+  const ico = e.target.closest(".ico");
+  if(ico){ e.preventDefault(); e.stopPropagation(); toggle(ico.dataset.act==="fav"?"favs":"done", ico.dataset.id); renderAll(); return; }
+  const tab = e.target.closest(".tab");
+  if(tab){ ui.cat = tab.dataset.cat; ui.cursor = -1; renderAll(); return; }
+  const tile = e.target.closest(".tile");
+  if(tile){
+    const g = byId(tile.dataset.id);
+    if(e.target.closest(".name")){ markDone(g); renderAll(); return; }
+    e.preventDefault(); window.open(g.u,"_blank","noopener"); markDone(g); renderAll();
+  }
+});
+$("#q").addEventListener("input", e=>{ ui.q = e.target.value; renderBoard(); });
+$("#hideDone").onclick = e=>{ ui.hideDone = !ui.hideDone; e.currentTarget.classList.toggle("on", ui.hideDone); renderBoard(); };
+$("#pick").onclick = ()=>{
+  const pool = visible().filter(g=>!S.done.includes(g.id));
+  if(!pool.length) return;
+  const g = pool[Math.floor(Math.random()*pool.length)];
+  window.open(g.u,"_blank","noopener"); markDone(g); renderAll();
+};
+$("#reset").onclick = ()=>{ S.done = []; save(); renderAll(); };
+
+/* ---------------- keyboard ---------------- */
+const tiles = () => [...document.querySelectorAll(".tile")];
+function move(d){
+  const t = tiles(); if(!t.length) return;
+  ui.cursor = Math.max(0, Math.min(t.length-1, ui.cursor + d));
+  t[ui.cursor].querySelector(".name").focus();
+  t[ui.cursor].scrollIntoView({block:"nearest"});
+}
+function cols(){
+  const t = tiles(); if(t.length<2) return 1;
+  const top = t[0].offsetTop; let n = 0;
+  while(n < t.length && t[n].offsetTop === top) n++;
+  return n || 1;
+}
+document.addEventListener("keydown", e=>{
+  const typing = document.activeElement === $("#q");
+  if(e.key==="/" && !typing){ e.preventDefault(); $("#q").focus(); $("#q").select(); return; }
+  if(e.key==="Escape" && typing){ ui.q=""; $("#q").value=""; $("#q").blur(); renderBoard(); return; }
+  if(typing) return;
+  const focused = document.activeElement.closest?.(".tile");
+  if(focused) ui.cursor = tiles().indexOf(focused);
+  if(e.key==="ArrowDown"||e.key==="j"){ e.preventDefault(); move(ui.cursor<0?0:cols()); }
+  else if(e.key==="ArrowUp"||e.key==="k"){ e.preventDefault(); move(-cols()); }
+  else if(e.key==="ArrowRight"||e.key==="l"){ e.preventDefault(); move(ui.cursor<0?0:1); }
+  else if(e.key==="ArrowLeft"||e.key==="h"){ e.preventDefault(); move(-1); }
+  else if(e.key==="r"){ e.preventDefault(); $("#pick").click(); }
+  else if(focused && (e.key==="x"||e.key==="f")){
+    e.preventDefault();
+    const id = focused.dataset.id;
+    toggle(e.key==="f"?"favs":"done", id);
+    renderAll();
+    tiles().find(el=>el.dataset.id===id)?.querySelector(".name").focus();
+  }
+});
+
+load(); renderAll(); tick(); setInterval(tick,1000);
+</script>
+</body>
+</html>
